@@ -1,12 +1,13 @@
+import os
 import random
 import turtle
 
-
+BASE_PATH = os.path.dirname(__file__)
 window = turtle.Screen()
-window.bgpic('images/background.png')
+window.bgpic(os.path.join(BASE_PATH, 'images', 'background.png'))
 window.setup(1205, 805)
 window.screensize(1200, 800)
-window.tracer(n=2)
+# window.tracer(n=2)
 
 ENEMY_COUNT = 5
 BASE_X, BASE_Y = 0, -300
@@ -78,7 +79,7 @@ def check_interceptions():
         our_missile = our_info['missile']
         for enemy_info in enemy_missiles:
             enemy_missile = enemy_info['missile']
-            if enemy_missile.distance(our_missile.xcor(), our_missile.ycor()) < 20:
+            if enemy_missile.distance(our_missile.xcor(), our_missile.ycor()) < our_info['radius'] * 10:
                 enemy_info['status'] = 'dead'
 
 
@@ -87,6 +88,16 @@ window.onclick(fire_missile)
 our_missiles = []
 enemy_missiles = []
 
+base = turtle.Turtle(visible=False)
+base.hideturtle()
+base.speed(0)
+base.penup()
+base.setpos(x=BASE_X,y=BASE_Y)
+pic_path = (os.path.join(BASE_PATH, 'images', 'base.gif'))
+window.register_shape(pic_path)
+base.shape(pic_path)
+base.showturtle()
+
 
 while True:
     window.update()
@@ -94,5 +105,3 @@ while True:
     check_interceptions()
     move_missiles(missiles=our_missiles)
     move_missiles(missiles=enemy_missiles)
-
-
