@@ -1,89 +1,34 @@
 import random
 import turtle
-import math
 
 
 window = turtle.Screen()
 window.bgpic('images/background.png')
 window.setup(1205, 805)
 window.screensize(1200, 800)
+window.tracer(n=2)
 
-
+ENEMY_COUNT = 5
 BASE_X, BASE_Y = 0, -300
 
 
-def calc_heading(x1, y1, x2, y2):
-    dx = x2 - x1
-    dy = y2 - y1
-    length = (dx ** 2 + dy ** 2) ** 0.5
-    cos_alpha = dx / length
-    alpha = math.acos(cos_alpha)
-    alpha = math.degrees(alpha)
-    if dy < 0:
-        alpha = -alpha
-    return alpha
-
-
-def fire_missile(x, y):
+def create_missile(color, x, y, x2, y2):
     missile = turtle.Turtle(visible=False)
     missile.speed(0)
-    missile.color('white')
+    missile.color(color)
     missile.penup()
-    missile.setpos(x=BASE_X, y=BASE_Y)
+    missile.setpos(x=x, y=y)
     missile.pendown()
-    heading = calc_heading(x1=BASE_X, y1=BASE_Y, x2=x, y2=y)
+    heading = missile.towards(x2, y2)
     missile.setheading(heading)
     missile.showturtle()
-    info = {'missile': missile, 'target': [x, y],
+    info = {'missile': missile, 'target': [x2, y2],
             'state': 'launched', 'radius': 0}
-    our_missiles.append(info)
+    return info
 
 
-def enemy_missile():
-    enemy = turtle.Turtle(visible=False)
-    enemy.speed(1)
-    enemy.color('red')
-    enemy.penup()
-    resp_x = random.randint(-600, 600)
-    enemy.setpos(x=resp_x, y=400)
-    enemy.pendown()
-    heading = calc_heading(x1=resp_x, y1=800, x2=BASE_X, y2=BASE_Y)
-    enemy.setheading(heading)
-    enemy.showturtle()
-    enemy.setpos(x=BASE_X, y=BASE_Y)
-    enemy.shape('circle')
-    enemy_info = {'enemy': enemy, 'target': [BASE_X, BASE_Y],
-                  'state': 'launched', 'radius': 0}
-    enemy_missiles.append(enemy_info)
-
-
-window.onclick(fire_missile)
-
-our_missiles = []
-enemy_missiles = []
-
-while True:
-    window.update()
-    enemy_missile()
-    # for enemy_info in enemy_missiles:
-    #     state = enemy_info['state']
-    #     enemy = enemy_info['enemy']
-    #     if enemy_info['state'] == 'launched':
-    #         enemy.forward(4)
-    #         target = enemy_info['target']
-    #         if enemy.distance(x=target[0], y=target[1]) < 20:
-    #             enemy_info['state'] = 'explode'
-    #             enemy.shape('circle')
-    #     elif state == 'explode':
-    #         enemy_info['radius'] += 1
-    #         if enemy_info['radius'] > 5:
-    #             enemy.clear()
-    #             enemy.hideturtle()
-    #             enemy['state'] = 'dead'
-    #         else:
-    #             enemy.shapesize(enemy_info['radius'])
-
-    for info in our_missiles:
+def move_missiles(missiles):
+    for info in missiles:
         state = info['state']
         missile = info['missile']
         if info['state'] == 'launched':
@@ -100,10 +45,54 @@ while True:
                 info['state'] = 'dead'
             else:
                 missile.shapesize(info['radius'])
+        elif state == 'dead':
+            missile.clear()
+            missile.hideturtle()
 
-
-
-
-    dead_missiles = [info for info in our_missiles if info['state'] == 'dead']
+    dead_missiles = [info for info in missiles if info['state'] == 'dead']
     for dead in dead_missiles:
-        our_missiles.remove(dead)
+        missiles.remove(dead)
+
+
+def fire_missile(x, y):
+    info = create_missile(color='white', x=BASE_X, y=BASE_Y, x2=x, y2=y)
+    our_missiles.append(info)
+
+
+def fire_enemy_missile():
+    x = random.randint(-600, 600)
+    y = 400
+    info = create_missile(color='red', x=x, y=y, x2=BASE_X, y2=BASE_Y)
+    enemy_missiles.append(info)
+
+
+def check_enemy_count():
+    if len(enemy_missiles) < ENEMY_COUNT:
+        fire_enemy_missile()
+
+
+def check_interceptions():
+    for our_info in our_missiles:
+        if our_info['state'] != 'explode':
+            continue
+        our_missile = our_info['missile']
+        for enemy_info in enemy_missiles:
+            enemy_missile = enemy_info['missile']
+            if enemy_missile.distance(our_missile.xcor(), our_missile.ycor()) < 20:
+                enemy_info['status'] = 'dead'
+
+
+window.onclick(fire_missile)
+
+our_missiles = []
+enemy_missiles = []
+
+
+while True:
+    window.update()
+    check_enemy_count()
+    check_interceptions()
+    move_missiles(missiles=our_missiles)
+    move_missiles(missiles=enemy_missiles)
+
+
