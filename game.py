@@ -1,10 +1,17 @@
 import os
 import random
+import time
 import turtle
 
 BASE_PATH = os.path.dirname(__file__)
 ENEMY_COUNT = 5
 BASE_X, BASE_Y = 0, -300
+BUILDING_INFO = {
+    'house': [BASE_X - 400, BASE_Y],
+    'kremlin': [BASE_X - 200, BASE_Y],
+    'nuclear': [BASE_X + 400, BASE_Y],
+    'skyscraper': [BASE_X + 200, BASE_Y]
+}
 
 
 class Missile:
@@ -56,9 +63,14 @@ class Missile:
 
 
 class Building:
+    INITIAL_HEALTH = 1000
 
     def __init__(self, name, x, y):
         self.name = name
+        self.x = x
+        self.y = y
+        self.health = self.INITIAL_HEALTH
+
         pen = turtle.Turtle(visible=False)
         pen.hideturtle()
         pen.speed(0)
@@ -69,15 +81,45 @@ class Building:
         pen.shape(pic_path)
         pen.showturtle()
         self.pen = pen
-        self.health = 2000
+
+        title = turtle.Turtle(visible=False)
+        title.hideturtle()
+        title.speed(0)
+        title.penup()
+        title.setpos(x=self.x, y=self.y - 65)
+        title.write(str(self.health), align='center', font=['Arial', 14, 'bold'])
+        self.title = title
+        self.title_health = self.health
 
     def get_pic_name(self):
+        if self.health < self.INITIAL_HEALTH * 0.2:
+            return f"{self.name}_3.gif"
+        if self.health < self.INITIAL_HEALTH * 0.8:
+            return f"{self.name}_2.gif"
         return f"{self.name}_1.gif"
+
+    def draw(self):
+        pic_name = self.get_pic_name()
+        pic_path = os.path.join(BASE_PATH, 'images', pic_name)
+        if self.pen.shape() != pic_path:
+            window.register_shape(pic_path)
+            self.pen.shape(pic_path)
+        if self.health != self.title_health:
+            self.title_health = self.health
+            self.title.clear()
+            self.title.write(str(self.title_health), align='center', font=['Arial', 14, 'bold'])
+
+    def is_alive(self):
+        return self.health > 0
 
 
 class MissileBase(Building):
+    INITIAL_HEALTH = 2000
 
     def get_pic_name(self):
+        for missile in our_missiles:
+            if missile.distance(self.x, self.y) < 50:
+                return f"{self.name}_opened.gif"
         return f"{self.name}.gif"
 
 
@@ -91,15 +133,18 @@ def move_missiles(missiles):
 
 
 def fire_missile(x, y):
-    info = Missile(color='white', x=BASE_X, y=BASE_Y, x2=x, y2=y)
+    info = Missile(color='white', x=BASE_X, y=BASE_Y + 30, x2=x, y2=y)
     our_missiles.append(info)
 
 
 def fire_enemy_missile():
     x = random.randint(-600, 600)
     y = 400
-    info = Missile(color='red', x=x, y=y, x2=BASE_X, y2=BASE_Y)
-    enemy_missiles.append(info)
+    alive_buildings = [b for b in buildings if b.is_alive()]
+    if alive_buildings:
+        target = random.choice(alive_buildings)
+        info = Missile(color='red', x=x, y=y, x2=target.x, y2=target.y)
+        enemy_missiles.append(info)
 
 
 def check_enemy_count():
@@ -117,50 +162,68 @@ def check_interceptions():
 
 
 def game_over():
-    return base_health <= 0
+    return base.health <= 0
 
 
 def check_impact():
-    global base_health
     for enemy_missile in enemy_missiles:
         if enemy_missile.state != 'explode':
             continue
-        if enemy_missile.distance(BASE_X, BASE_Y) < enemy_missile.radius * 10:
-            base_health -= 100
+        for building in buildings:
+            if enemy_missile.distance(building.x, building.y) < enemy_missile.radius * 10:
+                building.health -= 100
+
+
+def draw_buildings():
+    for building in buildings:
+        building.draw()
 
 
 window = turtle.Screen()
-window.bgpic(os.path.join(BASE_PATH, 'images', 'background.png'))
 window.setup(1205, 805)
 window.screensize(1200, 800)
-window.tracer(n=2)
-window.onclick(fire_missile)
 
-our_missiles = []
-enemy_missiles = []
-buildings = []
 
-base = MissileBase(name='base', x=BASE_X, y=BASE_Y)
-buildings.append(base)
-base_health = 2000
+def game():
+    global our_missiles, enemy_missiles, buildings, base
 
-building_info = {
-    'house': [BASE_X - 400, BASE_Y],
-    'kremlin': [BASE_X - 200, BASE_Y],
-    'nuclear': [BASE_X + 400, BASE_Y],
-    'skyscraper': [BASE_X + 200, BASE_Y]
-}
-for name, position in building_info.items():
-    base = Building(x=position[0], y=position[1], name=name)
+    window.clear()
+    window.tracer(n=2)
+    window.onclick(fire_missile)
+    window.bgpic(os.path.join(BASE_PATH, 'images', 'background.png'))
+
+    our_missiles = []
+    enemy_missiles = []
+    buildings = []
+
+    base = MissileBase(name='base', x=BASE_X, y=BASE_Y)
     buildings.append(base)
+
+    for name, position in BUILDING_INFO.items():
+        bld = Building(x=position[0], y=position[1], name=name)
+        buildings.append(bld)
+
+    while True:
+        window.update()
+        if game_over():
+            break
+        draw_buildings()
+        check_impact()
+        check_enemy_count()
+        check_interceptions()
+        move_missiles(missiles=our_missiles)
+        move_missiles(missiles=enemy_missiles)
+        time.sleep(0.01)
+
+    pen = turtle.Turtle(visible=False)
+    pen.speed(0)
+    pen.penup()
+    pen.setpos(x=-100, y=0)
+    pen.write('game over', align='center', font=['Arial', 14, 'bold'])
 
 
 while True:
-    window.update()
-    if game_over():
-        continue
-    check_impact()
-    check_enemy_count()
-    check_interceptions()
-    move_missiles(missiles=our_missiles)
-    move_missiles(missiles=enemy_missiles)
+    game()
+    answer = window.textinput(title='Hello', prompt='Try again?')
+    if answer.lower() not in ('y', 'yes', 'yep'):
+        break
