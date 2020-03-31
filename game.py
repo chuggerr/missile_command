@@ -188,7 +188,7 @@ def game():
     global our_missiles, enemy_missiles, buildings, base
 
     window.clear()
-    window.tracer(n=2)
+    window.tracer(n=5)
     window.onclick(fire_missile)
     window.bgpic(os.path.join(BASE_PATH, 'images', 'background.png'))
 
@@ -218,8 +218,9 @@ def game():
     pen = turtle.Turtle(visible=False)
     pen.speed(0)
     pen.penup()
-    pen.setpos(x=-100, y=0)
-    pen.write('game over', align='center', font=['Arial', 14, 'bold'])
+    pen.setpos(x=0, y=0)
+    pen.color('red')
+    pen.write('Game over', align='center', font=['Arial', 80, 'bold'])
 
 
 while True:
