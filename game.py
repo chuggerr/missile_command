@@ -3,12 +3,6 @@ import random
 import turtle
 
 BASE_PATH = os.path.dirname(__file__)
-window = turtle.Screen()
-window.bgpic(os.path.join(BASE_PATH, 'images', 'background.png'))
-window.setup(1205, 805)
-window.screensize(1200, 800)
-window.tracer(n=2)
-
 ENEMY_COUNT = 5
 BASE_X, BASE_Y = 0, -300
 
@@ -61,6 +55,32 @@ class Missile:
         return self.pen.ycor()
 
 
+class Building:
+
+    def __init__(self, name, x, y):
+        self.name = name
+        pen = turtle.Turtle(visible=False)
+        pen.hideturtle()
+        pen.speed(0)
+        pen.penup()
+        pen.setpos(x=x, y=y)
+        pic_path = os.path.join(BASE_PATH, 'images', self.get_pic_name())
+        window.register_shape(pic_path)
+        pen.shape(pic_path)
+        pen.showturtle()
+        self.pen = pen
+        self.health = 2000
+
+    def get_pic_name(self):
+        return f"{self.name}_1.gif"
+
+
+class MissileBase(Building):
+
+    def get_pic_name(self):
+        return f"{self.name}.gif"
+
+
 def move_missiles(missiles):
     for missile in missiles:
         missile.step()
@@ -96,24 +116,6 @@ def check_interceptions():
                 enemy_missile.state = 'dead'
 
 
-window.onclick(fire_missile)
-
-our_missiles = []
-enemy_missiles = []
-
-base = turtle.Turtle(visible=False)
-base.hideturtle()
-base.speed(0)
-base.penup()
-base.setpos(x=BASE_X, y=BASE_Y)
-pic_path = (os.path.join(BASE_PATH, 'images', 'base.gif'))
-window.register_shape(pic_path)
-base.shape(pic_path)
-base.showturtle()
-
-base_health = 2000
-
-
 def game_over():
     return base_health <= 0
 
@@ -125,6 +127,32 @@ def check_impact():
             continue
         if enemy_missile.distance(BASE_X, BASE_Y) < enemy_missile.radius * 10:
             base_health -= 100
+
+
+window = turtle.Screen()
+window.bgpic(os.path.join(BASE_PATH, 'images', 'background.png'))
+window.setup(1205, 805)
+window.screensize(1200, 800)
+window.tracer(n=2)
+window.onclick(fire_missile)
+
+our_missiles = []
+enemy_missiles = []
+buildings = []
+
+base = MissileBase(name='base', x=BASE_X, y=BASE_Y)
+buildings.append(base)
+base_health = 2000
+
+building_info = {
+    'house': [BASE_X - 400, BASE_Y],
+    'kremlin': [BASE_X - 200, BASE_Y],
+    'nuclear': [BASE_X + 400, BASE_Y],
+    'skyscraper': [BASE_X + 200, BASE_Y]
+}
+for name, position in building_info.items():
+    base = Building(x=position[0], y=position[1], name=name)
+    buildings.append(base)
 
 
 while True:
